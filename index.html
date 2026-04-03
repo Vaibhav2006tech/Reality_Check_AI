@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI vs Real Detector</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: auto;
+            text-align: center;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        img {
+            margin-top: 10px;
+            border: 1px solid #ccc;
+        }
+
+        .result {
+            white-space: pre-line; /* preserves line breaks */
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        hr {
+            margin: 40px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>AI vs Real Image Detector</h1>
+
+    <!-- IMAGE DETECTION -->
+    <input type="file" id="imageUpload" accept="image/*">
+    <br><br>
+    <img id="previewImage" src="" alt="Preview Image" width="300">
+    <br><br>
+    <button onclick="detectImage()">Detect Image</button>
+
+    <!-- Separate result for image -->
+    <h2 id="imageResult" class="result"></h2>
+
+    <hr>
+
+    <h1>AI vs Real Text Detector</h1>
+
+    <!-- TEXT DETECTION -->
+    <textarea id="textInput" placeholder="Paste your text here"></textarea>
+    <br>
+    <button onclick="detectText()">Detect Text</button>
+
+    <!-- Separate result for text -->
+    <h2 id="textResult" class="result"></h2>
+
+    <hr>
+
+    <h1>AI vs Real Audio Detector</h1>
+
+    <!-- AUDIO DETECTION -->
+    <input type="file" id="audioUpload" accept="audio/*">
+    <br><br>
+    <button onclick="detectAudio()">Detect Audio</button>
+
+    <!-- Separate result for audio -->
+    <h2 id="audioResult" class="result"></h2>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
