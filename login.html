@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+</head>
+<body>
+    <h2>Login</h2>
+    <input type="email" id="loginEmail" placeholder="Email" required><br><br>
+    <input type="password" id="loginPassword" placeholder="Password" required><br><br>
+    <button onclick="login()">Log In</button><br><br>
+    <a href="/signup">Don't have an account? Sign Up</a>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Import Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDyr3jYdbo3WzKlpcWM1BzPoVupWCcxwuY",
+            authDomain: "realitycheck-8f81e.firebaseapp.com",
+            projectId: "realitycheck-8f81e",
+            storageBucket: "realitycheck-8f81e.firebasestorage.app",
+            messagingSenderId: "327799012369",
+            appId: "1:327799012369:web:357f952334b3db077605b0",
+            measurementId: "G-Q0MRZXDKXJ"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Login function
+        window.login = function() {
+            const email = document.getElementById("loginEmail").value;
+            const password = document.getElementById("loginPassword").value;
+
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    alert("Logged In Successfully!");
+                    window.location.href = "/dashboard";
+                })
+                .catch((error) => {
+                    alert(error.message);
+                });
+        };
+
+        // Optional: Redirect logged-in users automatically
+        onAuthStateChanged(auth, (user) => {
+            if (user && window.location.pathname === "/login") {
+                window.location.href = "/dashboard";
+            }
+        });
+    </script>
+</body>
+</html>
