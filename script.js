@@ -1,27 +1,10 @@
 // ------------------- IMAGE DETECTION -------------------
-const uploadInput = document.getElementById("imageUpload");
-const previewImage = document.getElementById("previewImage");
-const imageResult = document.getElementById("imageResult");
-
-uploadInput.addEventListener("change", function() {
-    const file = this.files[0];
-
-    if(file){
-        const reader = new FileReader();
-
-        reader.onload = function(e){
-            previewImage.src = e.target.result;
-        }
-
-        reader.readAsDataURL(file);
-    }
-});
-
 function detectImage() {
     const fileInput = document.getElementById("imageUpload");
+    const imageResult = document.getElementById("imageResult");
 
-    if(fileInput.files.length === 0){
-        alert("Please upload an image");
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showToast("Please upload an image first");
         return;
     }
 
@@ -36,43 +19,34 @@ function detectImage() {
     })
     .then(response => response.json())
     .then(data => {
-        const ai = (data.ai_probability * 100).toFixed(2);
+        const ai   = (data.ai_probability   * 100).toFixed(2);
         const real = (data.real_probability * 100).toFixed(2);
 
         let verdict = "";
-
-        if(real < 80){
-            verdict = "AI Generated Image";
-        }
-        else if(real >= 80 && real < 85){
-            verdict = "Likely AI Generated";
-        }
-        else if(real >= 85 && real <= 90){
-            verdict = "Likely Real Image";
-        }
-        else{
-            verdict = "Real Image";
-        }
+        if      (real < 80)               verdict = "AI Generated Image";
+        else if (real >= 80 && real < 85) verdict = "Likely AI Generated";
+        else if (real >= 85 && real <= 90) verdict = "Likely Real Image";
+        else                              verdict = "Real Image";
 
         imageResult.innerText =
-            "AI Probability: " + ai + "%\n" +
+            "AI Probability:   " + ai   + "%\n" +
             "Real Probability: " + real + "%\n\n" +
             "Verdict: " + verdict;
     })
     .catch(error => {
         console.error(error);
-        imageResult.innerText = "Error detecting image";
+        imageResult.innerText = "Error detecting image. Is the server running?";
     });
 }
 
+
 // ------------------- TEXT DETECTION -------------------
-const textResult = document.getElementById("textResult");
-
 function detectText() {
-    const textInput = document.getElementById("textInput").value;
+    const textInput  = document.getElementById("textInput").value;
+    const textResult = document.getElementById("textResult");
 
-    if(!textInput){
-        alert("Please enter some text");
+    if (!textInput.trim()) {
+        showToast("Please enter some text first");
         return;
     }
 
@@ -80,32 +54,30 @@ function detectText() {
 
     fetch("http://127.0.0.1:5000/detect_text", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: textInput })
     })
     .then(response => response.json())
     .then(data => {
         textResult.innerText =
-            "Text: " + data.text + "\n" +
+            "Text: "          + data.text          + "\n" +
             "Reality Score: " + data.reality_score + "%\n" +
-            "Verdict: " + data.classification;
+            "Verdict: "       + data.classification;
     })
     .catch(error => {
         console.error(error);
-        textResult.innerText = "Error detecting text";
+        textResult.innerText = "Error detecting text. Is the server running?";
     });
 }
 
+
 // ------------------- AUDIO DETECTION -------------------
-const audioResult = document.getElementById("audioResult");
-
 function detectAudio() {
-    const audioInput = document.getElementById("audioUpload");
+    const audioInput  = document.getElementById("audioUpload");
+    const audioResult = document.getElementById("audioResult");
 
-    if(audioInput.files.length === 0){
-        alert("Please upload an audio file");
+    if (!audioInput.files || audioInput.files.length === 0) {
+        showToast("Please upload an audio file first");
         return;
     }
 
@@ -121,11 +93,11 @@ function detectAudio() {
     .then(response => response.json())
     .then(data => {
         audioResult.innerText =
-            "Reality Score: " + data.score + "%\n" +
-            "Verdict: " + data.classification;
+            "Reality Score: " + data.score          + "%\n" +
+            "Verdict: "       + data.classification;
     })
     .catch(error => {
         console.error(error);
-        audioResult.innerText = "Error detecting audio";
+        audioResult.innerText = "Error detecting audio. Is the server running?";
     });
 }
