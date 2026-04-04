@@ -3,83 +3,703 @@
 <head>
     <meta charset="UTF-8">
     <title>AI vs Real Detector</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Exo+2:wght@200;300;400;600&display=swap" rel="stylesheet">
     <style>
-        .container {
-            max-width: 600px;
-            margin: auto;
-            text-align: center;
+        :root {
+            --bg: #04060d;
+            --surface: rgba(0,200,255,0.03);
+            --surface2: rgba(0,200,255,0.055);
+            --border: rgba(0,200,255,0.1);
+            --border-bright: rgba(0,200,255,0.35);
+            --accent: #00c8ff;
+            --accent2: #ff3cac;
+            --accent3: #3dffb0;
+            --text: #d0eeff;
+            --muted: rgba(180,220,255,0.4);
+            --glow: rgba(0,200,255,0.08);
+            --clip: polygon(12px 0%, 100% 0%, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0% 100%, 0% 12px);
         }
 
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Exo 2', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Scanlines */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
+            pointer-events: none; z-index: 999;
+        }
+
+        /* Perspective grid floor */
+        .grid-bg {
+            position: fixed; inset: 0; z-index: 0;
+            perspective: 500px; overflow: hidden;
+        }
+        .grid-plane {
+            position: absolute; bottom: -20%; left: 50%;
+            transform: translateX(-50%) rotateX(62deg);
+            width: 220%; height: 200%;
+            background-image:
+                linear-gradient(rgba(0,200,255,0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,200,255,0.06) 1px, transparent 1px);
+            background-size: 64px 64px;
+            animation: gridMove 10s linear infinite;
+        }
+        @keyframes gridMove {
+            from { background-position: 0 0; }
+            to   { background-position: 0 64px; }
+        }
+
+        /* Glow orbs */
+        .orb {
+            position: fixed; border-radius: 50%;
+            filter: blur(100px); pointer-events: none; z-index: 0;
+        }
+        .orb-1 {
+            width: 700px; height: 400px; top: -120px; left: -200px;
+            background: radial-gradient(circle, rgba(0,200,255,0.1) 0%, transparent 70%);
+            animation: orbFloat 14s ease-in-out infinite alternate;
+        }
+        .orb-2 {
+            width: 500px; height: 500px; bottom: -100px; right: -150px;
+            background: radial-gradient(circle, rgba(255,60,172,0.08) 0%, transparent 70%);
+            animation: orbFloat 10s ease-in-out infinite alternate-reverse;
+        }
+        @keyframes orbFloat {
+            from { transform: translate(0,0); }
+            to   { transform: translate(25px, 20px); }
+        }
+
+        /* Corner brackets */
+        .corner { position: fixed; width: 56px; height: 56px; z-index: 2; pointer-events: none; }
+        .corner::before, .corner::after { content: ''; position: absolute; background: var(--accent); opacity: 0.25; }
+        .corner::before { width: 2px; height: 100%; }
+        .corner::after  { width: 100%; height: 2px; }
+        .corner-tl { top: 20px; left: 20px; }
+        .corner-tr { top: 20px; right: 20px; transform: scaleX(-1); }
+        .corner-bl { bottom: 20px; left: 20px; transform: scaleY(-1); }
+        .corner-br { bottom: 20px; right: 20px; transform: scale(-1); }
+
+        /* Page wrapper */
+        .page-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 64px 28px 100px;
+        }
+
+        /* ── HEADER ── */
+        .page-header {
+            text-align: center;
+            margin-bottom: 64px;
+            animation: fadeDown 0.8s cubic-bezier(0.16,1,0.3,1) both;
+        }
+
+        .page-header .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--accent);
+            border: 1px solid rgba(0,200,255,0.25);
+            background: rgba(0,200,255,0.06);
+            padding: 6px 16px;
+            margin-bottom: 24px;
+            clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+        }
+
+        .badge-dot {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+            animation: blink 2s step-end infinite;
+        }
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.1; } }
+
+        .page-header h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(2.8rem, 7vw, 4.5rem);
+            letter-spacing: 6px;
+            line-height: 1.0;
+            background: linear-gradient(135deg, #fff 0%, #80e8ff 40%, #ff3cac 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
+            filter: drop-shadow(0 0 30px rgba(0,200,255,0.25));
+        }
+
+        .page-header p {
+            margin-top: 16px;
+            color: var(--muted);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+
+        /* Horizontal rule under header */
+        .header-rule {
+            display: flex; align-items: center; gap: 14px;
+            margin-top: 28px;
+        }
+        .header-rule span {
+            flex: 1; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-bright), transparent);
+        }
+        .header-rule em {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 9px; letter-spacing: 2px;
+            color: rgba(0,200,255,0.3); font-style: normal;
+        }
+
+        /* ── DETECTOR CARDS ── */
+        .detector-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 32px 28px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            clip-path: var(--clip);
+            animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .detector-card:nth-child(2) { animation-delay: 0.1s; }
+        .detector-card:nth-child(3) { animation-delay: 0.2s; }
+        .detector-card:nth-child(4) { animation-delay: 0.3s; }
+
+        .detector-card:hover {
+            border-color: var(--border-bright);
+            box-shadow: 0 0 40px rgba(0,200,255,0.05);
+        }
+
+        /* Top accent bar */
+        .detector-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 2px;
+        }
+        .card-image::before { background: linear-gradient(90deg, var(--accent), transparent); }
+        .card-text::before  { background: linear-gradient(90deg, var(--accent2), transparent); }
+        .card-audio::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+
+        /* Scan sweep on hover */
+        .detector-card::after {
+            content: ''; position: absolute;
+            top: -2px; left: 0; right: 0; height: 2px;
+            opacity: 0;
+            animation: scanSweep 2.5s linear infinite;
+            transition: opacity 0.3s;
+        }
+        .card-image::after  { background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+        .card-text::after   { background: linear-gradient(90deg, transparent, var(--accent2), transparent); }
+        .card-audio::after  { background: linear-gradient(90deg, transparent, var(--accent3), transparent); }
+        .detector-card:hover::after { opacity: 0.7; }
+
+        @keyframes scanSweep {
+            from { top: 0; }
+            to   { top: 100%; }
+        }
+
+        /* Inner corner brackets */
+        .card-corner {
+            position: absolute;
+            width: 12px; height: 12px;
+            border-color: var(--border-bright); border-style: solid;
+            opacity: 0.4; transition: opacity 0.3s;
+        }
+        .detector-card:hover .card-corner { opacity: 0.8; }
+        .card-corner.tl { top: 8px; left: 8px; border-width: 1px 0 0 1px; }
+        .card-corner.tr { top: 8px; right: 8px; border-width: 1px 1px 0 0; }
+        .card-corner.bl { bottom: 8px; left: 8px; border-width: 0 0 1px 1px; }
+        .card-corner.br { bottom: 8px; right: 8px; border-width: 0 1px 1px 0; }
+
+        /* ── CARD HEADER ── */
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .card-icon {
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 17px; flex-shrink: 0;
+            clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+        }
+        .card-image .card-icon { background: rgba(0,200,255,0.12); }
+        .card-text .card-icon  { background: rgba(255,60,172,0.12); }
+        .card-audio .card-icon { background: rgba(61,255,176,0.12); }
+
+        .card-header h2 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 20px; letter-spacing: 4px;
+            color: var(--text);
+        }
+
+        .card-header .card-label {
+            margin-left: auto;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 9px; letter-spacing: 0.2em;
+            text-transform: uppercase; color: var(--muted);
+            border: 1px solid var(--border);
+            padding: 3px 10px;
+            clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+        }
+
+        /* ── UPLOAD ZONE ── */
+        .upload-zone {
+            border: 1px dashed rgba(0,200,255,0.2);
+            padding: 36px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.25s, background 0.25s;
+            margin-bottom: 16px;
+            position: relative;
+            clip-path: var(--clip);
+            overflow: hidden;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent);
+            background: var(--glow);
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute; inset: 0;
+            opacity: 0; cursor: pointer;
+            width: 100%; height: 100%;
+        }
+
+        .upload-zone .upload-icon {
+            font-size: 26px; margin-bottom: 10px;
+            display: block;
+            transition: filter 0.3s;
+        }
+        .upload-zone:hover .upload-icon { filter: drop-shadow(0 0 8px var(--accent)); }
+
+        .upload-zone p {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px; letter-spacing: 0.08em;
+            color: var(--muted); line-height: 1.8;
+        }
+        .upload-zone strong { color: var(--text); font-weight: 400; }
+
+        /* ── IMAGE PREVIEW ── */
+        #previewImage {
+            width: 100%; max-height: 220px; object-fit: cover;
+            border: 1px solid var(--border-bright);
+            margin-bottom: 16px;
+            display: none;
+            filter: brightness(0.9) saturate(0.8);
+            transition: filter 0.3s;
+            clip-path: var(--clip);
+        }
+        #previewImage[src]:not([src=""]) { display: block; }
+        #previewImage:hover { filter: brightness(1) saturate(1); }
+
+        /* ── TEXTAREA ── */
         textarea {
             width: 100%;
-            height: 100px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px; line-height: 1.8;
+            padding: 16px 18px;
+            resize: vertical; height: 120px;
+            outline: none;
+            transition: border-color 0.25s, box-shadow 0.25s;
+            margin-bottom: 16px;
+            clip-path: var(--clip);
+        }
+        textarea::placeholder { color: rgba(180,220,255,0.18); }
+        textarea:focus {
+            border-color: rgba(255,60,172,0.5);
+            box-shadow: 0 0 0 1px rgba(255,60,172,0.1), 0 0 24px rgba(255,60,172,0.06);
         }
 
-        button {
-            padding: 10px 20px;
-            margin-top: 10px;
-            cursor: pointer;
+        /* ── BUTTONS ── */
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .btn {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 14px; letter-spacing: 3px;
+            padding: 11px 26px;
+            border: none; cursor: pointer;
+            transition: all 0.25s;
+            display: flex; align-items: center; gap: 8px;
+            position: relative; overflow: hidden;
+            clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
         }
 
-        img {
-            margin-top: 10px;
-            border: 1px solid #ccc;
+        /* Shimmer */
+        .btn::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+            transform: translateX(-100%); transition: transform 0.5s;
+        }
+        .btn:hover::before { transform: translateX(100%); }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #04060d;
+            box-shadow: 0 4px 20px rgba(0,200,255,0.25);
+        }
+        .btn-primary:hover {
+            box-shadow: 0 6px 30px rgba(0,200,255,0.45);
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+        .btn-primary:active { transform: translateY(0); }
+
+        .card-text .btn-primary {
+            background: var(--accent2);
+            box-shadow: 0 4px 20px rgba(255,60,172,0.25);
+        }
+        .card-text .btn-primary:hover {
+            box-shadow: 0 6px 30px rgba(255,60,172,0.45);
         }
 
-        .result {
-            white-space: pre-line; /* preserves line breaks */
-            margin-top: 20px;
-            font-weight: bold;
+        .card-audio .btn-primary {
+            background: var(--accent3);
+            box-shadow: 0 4px 20px rgba(61,255,176,0.2);
+        }
+        .card-audio .btn-primary:hover {
+            box-shadow: 0 6px 30px rgba(61,255,176,0.35);
         }
 
-        hr {
-            margin: 40px 0;
+        .btn-ghost {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--border);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px; letter-spacing: 2px;
         }
+        .btn-ghost:hover {
+            color: var(--text);
+            border-color: var(--border-bright);
+            background: rgba(0,200,255,0.04);
+        }
+
+        /* ── RESULT BOX ── */
+        .result-box {
+            margin-top: 16px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-left: 2px solid var(--accent);
+            padding: 16px 18px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px; line-height: 1.8;
+            white-space: pre-line; color: var(--text);
+            display: none; position: relative;
+            clip-path: var(--clip);
+            box-shadow: inset 0 0 40px rgba(0,200,255,0.02);
+        }
+        .card-text .result-box  { border-left-color: var(--accent2); }
+        .card-audio .result-box { border-left-color: var(--accent3); }
+
+        .result-box.visible {
+            display: block;
+            animation: resultIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        @keyframes resultIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-box .result-label {
+            font-size: 9px; letter-spacing: 0.2em;
+            text-transform: uppercase; color: var(--muted);
+            margin-bottom: 8px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .result-label::before {
+            content: ''; width: 16px; height: 1px;
+            background: var(--border-bright);
+        }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── SPINNER ── */
+        .spinner {
+            display: inline-block; width: 14px; height: 14px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-top-color: #fff; border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── FOOTER ── */
+        .page-footer {
+            text-align: center; margin-top: 48px;
+            font-family: 'Share Tech Mono', monospace;
+            color: rgba(180,220,255,0.2);
+            font-size: 10px; letter-spacing: 0.15em;
+            text-transform: uppercase;
+            animation: fadeUp 0.6s 0.4s ease both;
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-bright); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
     </style>
 </head>
 <body>
 
-<div class="container">
+<!-- Background layers -->
+<div class="grid-bg"><div class="grid-plane"></div></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="corner corner-tl"></div>
+<div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div>
+<div class="corner corner-br"></div>
 
-    <h1>AI vs Real Image Detector</h1>
+<div class="page-wrapper">
 
-    <!-- IMAGE DETECTION -->
-    <input type="file" id="imageUpload" accept="image/*">
-    <br><br>
-    <img id="previewImage" src="" alt="Preview Image" width="300">
-    <br><br>
-    <button onclick="detectImage()">Detect Image</button>
+    <!-- Header -->
+    <div class="page-header">
+        <div class="badge"><span class="badge-dot"></span>Detection Suite v1.0</div>
+        <h1>AI vs Real<br>Content Detector</h1>
+        <p>Analyze images, text &amp; audio to identify AI-generated content</p>
+        <div class="header-rule">
+            <span></span><em>SYNTH ENGINE</em><span></span>
+        </div>
+    </div>
 
-    <!-- Separate result for image -->
-    <h2 id="imageResult" class="result"></h2>
+    <!-- IMAGE CARD -->
+    <div class="detector-card card-image">
+        <div class="card-corner tl"></div>
+        <div class="card-corner tr"></div>
+        <div class="card-corner bl"></div>
+        <div class="card-corner br"></div>
+        <div class="card-header">
+            <div class="card-icon">🖼</div>
+            <h2>Image Detector</h2>
+            <span class="card-label">Vision</span>
+        </div>
 
-    <hr>
+        <div class="upload-zone" id="imageDropZone">
+            <input type="file" id="imageUpload" accept="image/*">
+            <div class="upload-icon">📁</div>
+            <p><strong>Click to upload</strong> or drag &amp; drop<br>PNG, JPG, WEBP supported</p>
+        </div>
 
-    <h1>AI vs Real Text Detector</h1>
+        <img id="previewImage" src="" alt="Preview Image">
 
-    <!-- TEXT DETECTION -->
-    <textarea id="textInput" placeholder="Paste your text here"></textarea>
-    <br>
-    <button onclick="detectText()">Detect Text</button>
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="detectImage()">
+                <span>Analyze Image</span>
+            </button>
+            <button class="btn btn-ghost" onclick="saveImageResult()">
+                💾 Save Result
+            </button>
+        </div>
 
-    <!-- Separate result for text -->
-    <h2 id="textResult" class="result"></h2>
+        <div class="result-box" id="imageResultBox">
+            <div class="result-label">Detection Result</div>
+            <h2 id="imageResult" class="result"></h2>
+        </div>
+    </div>
 
-    <hr>
+    <!-- TEXT CARD -->
+    <div class="detector-card card-text">
+        <div class="card-corner tl"></div>
+        <div class="card-corner tr"></div>
+        <div class="card-corner bl"></div>
+        <div class="card-corner br"></div>
+        <div class="card-header">
+            <div class="card-icon">✍️</div>
+            <h2>Text Detector</h2>
+            <span class="card-label">NLP</span>
+        </div>
 
-    <h1>AI vs Real Audio Detector</h1>
+        <textarea id="textInput" placeholder="Paste your text here to analyze…"></textarea>
 
-    <!-- AUDIO DETECTION -->
-    <input type="file" id="audioUpload" accept="audio/*">
-    <br><br>
-    <button onclick="detectAudio()">Detect Audio</button>
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="detectText()">
+                <span>Analyze Text</span>
+            </button>
+            <button class="btn btn-ghost" onclick="saveTextResult()">
+                💾 Save Result
+            </button>
+        </div>
 
-    <!-- Separate result for audio -->
-    <h2 id="audioResult" class="result"></h2>
+        <div class="result-box" id="textResultBox">
+            <div class="result-label">Detection Result</div>
+            <h2 id="textResult" class="result"></h2>
+        </div>
+    </div>
 
+    <!-- AUDIO CARD -->
+    <div class="detector-card card-audio">
+        <div class="card-corner tl"></div>
+        <div class="card-corner tr"></div>
+        <div class="card-corner bl"></div>
+        <div class="card-corner br"></div>
+        <div class="card-header">
+            <div class="card-icon">🎵</div>
+            <h2>Audio Detector</h2>
+            <span class="card-label">Audio</span>
+        </div>
+
+        <div class="upload-zone" id="audioDropZone">
+            <input type="file" id="audioUpload" accept="audio/*">
+            <div class="upload-icon">🎙</div>
+            <p><strong>Click to upload</strong> audio file<br>MP3, WAV, M4A supported</p>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="detectAudio()">
+                <span>Analyze Audio</span>
+            </button>
+            <button class="btn btn-ghost" onclick="saveAudioResult()">
+                💾 Save Result
+            </button>
+        </div>
+
+        <div class="result-box" id="audioResultBox">
+            <div class="result-label">Detection Result</div>
+            <h2 id="audioResult" class="result"></h2>
+        </div>
+    </div>
+
+    <div class="page-footer">
+        Powered by AI · Results are probabilistic and not guaranteed
+    </div>
 </div>
 
-<script src="script.js"></script>
+<!-- Show result boxes when results populate -->
+<script>
+    // Show preview image when file selected
+    document.getElementById('imageUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const img = document.getElementById('previewImage');
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 
+    // Update upload zone labels on file select
+    document.getElementById('audioUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            document.querySelector('#audioDropZone p').innerHTML =
+                `<strong>${file.name}</strong><br><span style="color:var(--accent3)">File loaded ✓</span>`;
+        }
+    });
+
+    // Observe result elements and show boxes
+    function showResultBox(resultId, boxId) {
+        const result = document.getElementById(resultId);
+        const box = document.getElementById(boxId);
+        const observer = new MutationObserver(() => {
+            if (result.innerText.trim() !== '') {
+                box.classList.add('visible');
+            }
+        });
+        observer.observe(result, { childList: true, subtree: true, characterData: true });
+    }
+    showResultBox('imageResult', 'imageResultBox');
+    showResultBox('textResult', 'textResultBox');
+    showResultBox('audioResult', 'audioResultBox');
+</script>
+
+<script src="script.js"></script>
+<script>
+function saveImageResult(){
+    const result = document.getElementById("imageResult").innerText;
+    if(result.trim() === ""){
+        alert("Run detection first");
+        return;
+    }
+    saveAnalysis("Image Detection", result);
+}
+function saveTextResult(){
+    const result = document.getElementById("textResult").innerText;
+    if(result.trim() === ""){
+        alert("Run detection first");
+        return;
+    }
+    saveAnalysis("Text Detection", result);
+}
+function saveAudioResult(){
+    const result = document.getElementById("audioResult").innerText;
+    if(result.trim() === ""){
+        alert("Run detection first");
+        return;
+    }
+    saveAnalysis("Audio Detection", result);
+}
+</script>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyDYgVdsQQGsQPmNlkviAAPyImvYGJ_aHdg",
+  authDomain: "signupsystemcheck.firebaseapp.com",
+  projectId: "signupsystemcheck",
+  storageBucket: "signupsystemcheck.firebasestorage.app",
+  messagingSenderId: "1676521893",
+  appId: "1:1676521893:web:05a0961ca7e29d8963b84c",
+  measurementId: "G-WLZZH6N3X7"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+window.saveAnalysis = async function(type, result){
+    const user = auth.currentUser;
+    if(!user){
+        alert("User not logged in");
+        return;
+    }
+    let imageData = null;
+    const previewImage = document.getElementById("previewImage");
+    if(previewImage && previewImage.src){
+        imageData = previewImage.src;
+    }
+    await addDoc(collection(db,"analysis"),{
+        user: user.email,
+        type: type,
+        result: result,
+        image: imageData,
+        time: new Date().toLocaleString()
+    });
+    alert("Saved to dashboard");
+}
+</script>
 </body>
 </html>
