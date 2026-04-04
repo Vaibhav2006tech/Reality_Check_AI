@@ -5,26 +5,6 @@ app = Flask(__name__)
 CORS(app)
 app.secret_key = "your_secret_key_here"  # Needed for session management
 
-# ------------------- LOGIN & SIGNUP PAGES -------------------
-
-@app.route("/signup")
-def signup_page():
-    return render_template("signup.html")
-
-@app.route("/login")
-def login_page():
-    return render_template("login.html")
-
-@app.route("/dashboard")
-def dashboard_page():
-    return render_template("dashboard.html")
-
-@app.route("/logout")
-def logout():
-    # Session is mostly not needed here since Firebase handles auth,
-    # but we can still clear any session data if used.
-    session.pop("user", None)
-    return redirect("/login")
 
 # ------------------- IMAGE DETECTION -------------------
 from image_detector import detect_image
@@ -61,9 +41,9 @@ def detect_text():
 
     score = detect_ai_text(text)
 
-    if score < 80:
+    if score < 25:
         label = "AI Generated Text"
-    elif score < 85:
+    elif score < 65:
         label = "Likely AI Generated"
     elif score <= 90:
         label = "Likely Human"
